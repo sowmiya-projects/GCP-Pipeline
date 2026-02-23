@@ -1,0 +1,70 @@
+steps:
+  # Step 1: Install dependencies
+  - name: 'node:18-alpine'
+    id: 'install'
+    entrypoint: npm
+    args: ['install']
+ 
+  # Step 2: Run tests — pipeline STOPS here if any test fails
+  - name: 'node:18-alpine'
+    id: 'test'
+    entrypoint: npm
+    args: ['test']
+    waitFor: ['install']
+ 
+  # Step 3: Build Docker image with two tags
+  - name: 'gcr.io/cloud-builders/docker'
+    id: 'build-image'
+    args:
+      - build
+      - '-t'
+      - 'us-docker.pkg.dev/$PROJECT_ID/gcr.io/nodejs-gcp-demo:$COMMIT_SHA'
+      - '-t'
+      - 'us-docker.pkg.dev/$PROJECT_ID/gcr.io/nodejs-gcp-demo:latest'
+      - '.'
+    waitFor: ['test']
+ 
+  # Step 4: Push commit SHA tagged image
+  - name: 'gcr.io/cloud-builders/docker'
+    id: 'push-sha'
+    args: ['push', 'us-docker.pkg.dev/$PROJECT_ID/gcr.io/nodejs-gcp-demo:$COMMIT_SHA']
+    waitFor: ['build-image']
+ 
+  # Step 5: Push latest tag
+  - name: 'gcr.io/cloud-builders/docker'
+    id: 'push-latest'
+    args: ['push', 'us-docker.pkg.dev/$PROJECT_ID/gcr.io/nodejs-gcp-demo:latest']
+    waitFor: ['build-image']
+ 
+  # Step 6: SSH into VM and deploy new container
+  - name: 'gcr.io/cloud-builders/gcloud'
+    id: 'deploy'
+    entrypoint: bash
+    args:
+      - '-c'
+      - |
+        gcloud compute ssh nodejs-vm \
+          --zone=${_ZONE} \
+          --command="
+            sudo gcloud auth configure-docker us-docker.pkg.dev --quiet &&
+            sudo docker pull us-docker.pkg.dev/$PROJECT_ID/gcr.io/nodejs-gcp-demo:latest &&
+            sudo docker stop nodejs-app 2>/dev/null || true &&
+            sudo docker rm nodejs-app 2>/dev/null || true &&
+            sudo docker run -d \
+              --name nodejs-app \
+              --restart always \
+              -p 3000:3000 \
+              -e NODE_ENV=production \
+              us-docker.pkg.dev/$PROJECT_ID/gcr.io/nodejs-gcp-demo:latest
+          "
+    waitFor: ['push-latest']
+ 
+images:
+  - 'us-docker.pkg.dev/$PROJECT_ID/gcr.io/nodejs-gcp-demo:$COMMIT_SHA'
+  - 'us-docker.pkg.dev/$PROJECT_ID/gcr.io/nodejs-gcp-demo:latest'
+ 
+substitutions:
+  _ZONE: 'us-central1-c'
+ 
+options:
+  logging: CLOUD_LOGGING_ONLY
