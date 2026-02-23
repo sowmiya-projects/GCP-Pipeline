@@ -23,20 +23,32 @@ steps:
       - 'us-docker.pkg.dev/$PROJECT_ID/gcr.io/nodejs-gcp-demo:latest'
       - '.'
     waitFor: ['test']
+
+  #Step 4: Trivy Scan (NEW STEP)#
+  - name: 'aquasec/trivy'
+    id: 'trivy-scan'
+    args:
+      - 'image'
+      - '--severity'
+      - 'CRITICAL,HIGH'
+      - '--exit-code'
+      - '1'
+      - 'us-docker.pkg.dev/$PROJECT_ID/gcr.io/nodejs-gcp-demo:$COMMIT_SHA'
+    waitFor: ['build-image']
  
-  # Step 4: Push commit SHA tagged image
+  # Step 5: Push commit SHA tagged image
   - name: 'gcr.io/cloud-builders/docker'
     id: 'push-sha'
     args: ['push', 'us-docker.pkg.dev/$PROJECT_ID/gcr.io/nodejs-gcp-demo:$COMMIT_SHA']
     waitFor: ['build-image']
  
-  # Step 5: Push latest tag
+  # Step 6: Push latest tag
   - name: 'gcr.io/cloud-builders/docker'
     id: 'push-latest'
     args: ['push', 'us-docker.pkg.dev/$PROJECT_ID/gcr.io/nodejs-gcp-demo:latest']
     waitFor: ['build-image']
  
-  # Step 6: SSH into VM and deploy new container
+  # Step 7: SSH into VM and deploy new container
   - name: 'gcr.io/cloud-builders/gcloud'
     id: 'deploy'
     entrypoint: bash
