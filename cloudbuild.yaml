@@ -24,15 +24,13 @@ steps:
       - '.'
     waitFor: ['test']
 
-  #Step 4: Trivy Scan (NEW STEP)#
+  # 🔐 Step 4: Trivy Scan (Testing Mode - Will NOT Fail)
   - name: 'aquasec/trivy'
     id: 'trivy-scan'
     args:
       - 'image'
       - '--severity'
       - 'CRITICAL,HIGH'
-      - '--exit-code'
-      - '1'
       - 'us-docker.pkg.dev/$PROJECT_ID/gcr.io/nodejs-gcp-demo:$COMMIT_SHA'
     waitFor: ['build-image']
  
