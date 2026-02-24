@@ -4,8 +4,8 @@ const PORT = process.env.PORT || 3000;
 app.use(express.json());
 app.get('/', (req, res) => {
   res.json({
-    message: 'Hello from GCP Pipeline!',
-    version: '1.0.0',
+    message: 'Hello from GCP Pipeline-2!',
+    version: '1.2.0',
     environment: process.env.NODE_ENV || 'development',
     timestamp: new Date().toISOString()
   });
