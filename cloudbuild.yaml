@@ -53,7 +53,7 @@ steps:
     args:
       - '-c'
       - |
-        gcloud compute ssh nodejs-vm \
+        gcloud compute ssh gcp-pipeline \
           --zone=${_ZONE} \
           --command="
             sudo gcloud auth configure-docker us-docker.pkg.dev --quiet &&
